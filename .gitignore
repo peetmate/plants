@@ -9,6 +9,9 @@ planta_shots/
 *.xls
 *.xlsm
 
+# Generated export output (regenerate via planta_process.py; data lives in Drive)
+planta_plants.csv
+
 # Python
 __pycache__/
 *.pyc

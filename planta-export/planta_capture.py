@@ -38,9 +38,10 @@ STABLE_HITS = 4       # stop after this many near-identical frames in a row
                       # (>=4: rides out lazy-load pauses + periodic rejected swipes)
 DIFF_THRESH = 2.0     # mean per-pixel difference below this = "no movement"
 Y_START_F   = 0.85    # swipe starts here (fraction of screen height)
-Y_END_F     = 0.15    # ...and ends here. Gap ~0.70H = ~7 rows/swipe, ~1 row overlap.
-                      # List area (crop 0.10-0.90 = 0.80H) shows ~8 rows, so this
-                      # advances ~8 plants/shot while keeping one row to dedup on.
+Y_END_F     = 0.35    # ...and ends here. Gap ~0.50H = ~5 rows/swipe, ~3 rows overlap.
+                      # List area (crop 0.10-0.90 = 0.80H) shows ~8 rows. The wider
+                      # 0.70H swipe left near-ZERO overlap and skipped ~11% of plants;
+                      # this trades shot count for a guaranteed overlap (no skips).
 
 
 def adb(*args, binary=False):
