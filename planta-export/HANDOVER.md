@@ -17,20 +17,51 @@ Plan: screenshot-automation -> OCR -> dedup.
 > Note: git can't be run from the Cowork sandbox (it can't unlink `.git` lock/temp
 > files — "Operation not permitted"). Run git natively — **Claude Code in VSCode**.
 
-## Pipeline (now three phases)
-1. **List capture** — `planta_capture.py` auto-scrolls the Plants tab over ADB,
-   screenshots each step with deliberate overlap, and auto-stops at the bottom.
-2. **Per-plant photo capture** — `planta_photos.py` *(NOT YET WRITTEN)*: for each
-   plant, drill in and screenshot its photos. See "Per-plant photo capture" below.
-3. **Process** — `planta_process.py` *(NOT YET WRITTEN)*: OCR the list shots, stitch
-   the overlapping frames, drop duplicates, output Latin name / common name /
-   category to a spreadsheet.
+## Pipeline (three phases — all BUILT)
+1. **List capture → names.** Two working tools:
+   - `planta_list.py` *(preferred, token-zero)* — scroll + `uiautomator dump`, parse
+     EXACT plant names from the tree, stitch overlapping dumps → `planta_plants.csv`.
+   - `planta_capture.py` + `planta_process.py` *(original)* — screenshot each scroll
+     step, then Claude-vision OCR (`shots.json`) → stitch → `planta_plants.csv`/`.xlsx`.
+     Got the first full list (874) but costs tokens; `planta_list.py` superseded it.
+2. **Per-plant photo capture** — `planta_photos.py` *(BUILT)*: UI-tree-driven, taps
+   into each plant and screenshots its photos. See "Per-plant photo capture" below.
+3. **Process** — `planta_process.py` *(BUILT)*: stitch + export for the vision route.
 
-## Per-plant photo capture  (NEW requirement, 2026-06-04)
-Each plant may have photos attached. Desired per-plant flow:
+**Output so far:** `planta_plants.csv` = 874 plants, full A→Z (app says 861; ~13 over
+from repeated-name overlap + owner's own spelling variants kept verbatim).
+
+## Per-plant photo capture — BUILT (`planta_photos.py`, 2026-06-04)
+UI-tree-driven (no OCR, no per-image model calls → ~0 tokens; screenshots are
+files, never sent to the model). **Actual flow discovered on the live app:**
+flat Plants list → tap plant → detail (`UserPlantActivity`) → scroll to History,
+tap **"View all updates"** → `PlantPhotosNotesActivity` ("Photos & Notes"), a list
+of photo cards (each a `View` with content-desc "`<date> photo`") → tap each →
+full-screen viewer → `screencap`, crop to the image band → file → back → next plant.
+
+**Run it** (start anywhere — it self-navigates to the flat list and verifies):
+```bash
+adb shell svc power stayon true          # keep screen awake (revert: ... false)
+python3 planta_photos.py                 # full run, resumes if interrupted
+python3 planta_photos.py 50              # just the next 50 plants (test/chunk)
+```
+- Output: `planta_photos/<UID>_<plant-slug>/<UID>_<plant-slug>__<date>.png`
+  + `planta_photos_manifest.csv` (uid, plant, n_photos, files). Both gitignored.
+- **~31 s/plant → ~7.5 h for 861.** Cost is uiautomator-dump-bound, not tokens.
+- **Resumable:** skips plants already in the manifest and keeps UID numbering, so
+  re-running after any interruption (call, app-switch, USB drop) just continues.
+- Robustness: self-navigates to the flat list (bottom-nav `tab_plants` + "Plants"
+  sub-tab, verified by the "N Plants · M Sites" header); re-foregrounds Planta if
+  focus is lost; per-tap guard skips rows that don't open `UserPlantActivity`.
+- ⚠️ **Keep the phone idle during a run** — calls/app-switches/USB jostling knock
+  Planta out of focus; it recovers but each hit costs time. Also note: the full-screen
+  photo viewer has a **"Download image"** button — saving originals to the gallery
+  (then `adb pull`) would beat lossy screenshots; not used (Pete chose screenshots).
+
+### Original desired flow (for reference)
 tap plant entry → scroll down to **History** → tap an **"Added photo"** entry →
-screenshot the photo → back → look for the next "Added photo" entry → repeat →
-exit/back to the list → next plant.
+screenshot the photo → back → next "Added photo" → repeat → back to list → next plant.
+(The implemented "View all updates" → Photos & Notes route is the cleaner equivalent.)
 
 **Decisions (from Pete):**
 - **Photos: screenshots only.** Planta has no export; photos live only in-app, so
@@ -65,11 +96,17 @@ Save shots named with the plant name so attribution survives. Robust back-naviga
 + "advance to next plant" logic is the crux; develop iteratively against the live phone.
 
 ## Built so far
-- `planta_capture.py` — ADB capture; tunable swipe distance; auto-stop via a
-  cropped frame-diff (status bar cropped out so the ticking clock doesn't fool
-  end-detection).
-- `README.md`, `.gitignore` (ignores screenshots + `*.xlsx`), `requirements.txt`
-  (pillow).
+- `planta_list.py` — **token-zero list capture**: scroll + `uiautomator dump`, parse
+  exact names from the tree, stitch overlaps → `planta_plants.csv`. Run only in the
+  default alphabetical Plants list view (the family-grouped / care-task views differ).
+- `planta_photos.py` — **per-plant photo capture** (see section above). Self-navigating,
+  resumable, UI-tree-driven.
+- `planta_capture.py` — screenshot capture (original list route); tunable swipe,
+  cropped frame-diff auto-stop.
+- `planta_process.py` — stitch + export for the vision route (`shots.json` → CSV/XLSX).
+- `shots.json` / `shots_pass1.json` — vision-OCR transcripts (inputs to planta_process).
+- `README.md`, `.gitignore` (ignores screenshots, `*.xlsx`, `planta_plants.csv`,
+  `planta_photos/`, manifest), `requirements.txt` (pillow; openpyxl for XLSX).
 
 ## Environment
 Mac + Android phone over USB. Setup:
