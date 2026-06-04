@@ -12,6 +12,10 @@ planta_shots/
 # Generated export output (regenerate via planta_process.py; data lives in Drive)
 planta_plants.csv
 
+# Per-plant photo captures + manifest (large/personal; live in Drive)
+planta_photos/
+planta_photos_manifest.csv
+
 # Python
 __pycache__/
 *.pyc
