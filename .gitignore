@@ -27,3 +27,6 @@ venv/
 .DS_Store
 .sync.ffs_db
 Thumbs.db
+
+# Run logs
+*.log
