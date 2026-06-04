@@ -44,6 +44,7 @@ REMOTE_XML = "/sdcard/planta_ui.xml"
 PKG = "com.stromming.planta"
 LIST_ACT = "myplants.plants.detail.compose.UserPlantActivity"   # plant detail
 PHOTOS_ACT = "PlantPhotosNotesActivity"                          # photos & notes
+PHOTO_VIEW_ACT = "PicturesActivity"                              # full-screen viewer
 LEFT_X = 252                  # x-left of plant name Textviews in the flat list
 CARD_GAP = 60                 # vertical gap = new card (name/category grouping)
 PHOTO_CROP = (0, 275, 1008, 2037)   # full-screen photo band (status/action bars out)
@@ -72,8 +73,22 @@ def top_activity():
 
 
 def dump():
-    adb("shell", "uiautomator", "dump", REMOTE_XML)
-    return ET.fromstring(adb("exec-out", "cat", REMOTE_XML, binary=True))
+    last_err = None
+    for _ in range(8):
+        adb("shell", "uiautomator", "dump", REMOTE_XML)
+        xml = adb("exec-out", "cat", REMOTE_XML, binary=True)
+        if xml.strip():
+            try:
+                return ET.fromstring(xml)
+            except ET.ParseError as e:
+                last_err = e
+        else:
+            # empty dump usually = screen off/locked; wake it and retry
+            adb("shell", "input", "keyevent", "KEYCODE_WAKEUP")
+        time.sleep(1)
+    if last_err:
+        raise last_err
+    raise ET.ParseError("empty uiautomator dump")
 
 
 def nodes(root):
@@ -242,6 +257,7 @@ def capture_plant_photos(w, h, uid, name):
         date, cx, cy = cards[0]
         captured.add(date)
         adb("shell", "input", "tap", str(cx), str(cy)); time.sleep(SETTLE)
+        adb("shell", "input", "tap", str(w // 2), str(h // 2)); time.sleep(SETTLE)
         os.makedirs(pdir, exist_ok=True)
         fn = os.path.join(pdir, f"{uid}_{slug(name)}__{slug(date)}.png")
         if os.path.exists(fn):
@@ -250,7 +266,14 @@ def capture_plant_photos(w, h, uid, name):
             screencap_crop(fn); saved.append(fn)
         except Exception as e:
             print(f"    ! screencap failed for {date}: {e}")
-        back()                          # back to Photos&Notes list
+        for _ in range(4):              # back to Photos&Notes list
+            act = top_activity()
+            if PHOTOS_ACT in act:
+                break
+            if PKG in act:
+                back()
+            else:
+                break
     return saved
 
 
@@ -323,7 +346,8 @@ def main():
         man.flush()
         # back to the flat plant list (detail -> list)
         for _ in range(4):
-            if "UserPlantActivity" in top_activity() or PHOTOS_ACT in top_activity():
+            if ("UserPlantActivity" in top_activity() or
+                    PHOTOS_ACT in top_activity() or PHOTO_VIEW_ACT in top_activity()):
                 back()
             else:
                 break
