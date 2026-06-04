@@ -47,7 +47,7 @@ PHOTOS_ACT = "PlantPhotosNotesActivity"                          # photos & note
 LEFT_X = 252                  # x-left of plant name Textviews in the flat list
 CARD_GAP = 60                 # vertical gap = new card (name/category grouping)
 PHOTO_CROP = (0, 275, 1008, 2037)   # full-screen photo band (status/action bars out)
-SETTLE = 0.8
+SETTLE = 0.6
 MAX_DETAIL_SCROLLS = 8        # detail scrolls hunting for "View all updates"
 MAX_PHOTO_SCROLLS = 30        # photos-list scrolls to load all entries
 MAX_LIST_STALE = 3            # list scrolls with no new plant = bottom
@@ -169,8 +169,11 @@ def list_plant_rows(root):
         cards.append(cur)
     out = []
     for c in cards:
+        if len(c) < 2:            # full plant card = name line + category line;
+            continue              # single-line = a screen-edge partial (or a stray
+                                  # category) -> skip; the plant shows fully elsewhere
         top, bot, name = c[0]
-        if " " not in name and name.endswith("aceae"):
+        if name.endswith("aceae") and " " not in name:
             continue
         out.append((name, (top + bot) // 2))
     return out
@@ -266,24 +269,48 @@ def main():
                  "'Plants' sub-tab, then re-run.")
     for _ in range(20):                 # fling to top of list
         adb("shell", "input", "swipe", str(w // 2), str(h // 4), str(w // 2), str(h * 9 // 10), "50")
-    man = open(MANIFEST, "w", newline="", encoding="utf-8")
-    mw = csv.writer(man); mw.writerow(["uid", "plant", "n_photos", "files"]); man.flush()
+    # Resume: if a manifest already exists, skip plants already done and keep
+    # numbering, so an interrupted long run continues instead of restarting.
+    visited, uid = set(), 0
+    if os.path.exists(MANIFEST):
+        with open(MANIFEST, newline="", encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                visited.add(row["plant"])
+                m = re.match(r"P(\d+)", row.get("uid", ""))
+                if m:
+                    uid = max(uid, int(m.group(1)))
+        print(f"Resuming: {len(visited)} plants already in manifest (next P{uid+1:04d}).")
+        man = open(MANIFEST, "a", newline="", encoding="utf-8")
+        mw = csv.writer(man)
+    else:
+        man = open(MANIFEST, "w", newline="", encoding="utf-8")
+        mw = csv.writer(man); mw.writerow(["uid", "plant", "n_photos", "files"]); man.flush()
 
-    visited, uid, stale = set(), 0, 0
-    while uid < max_plants:
+    stale, prev_sig, processed = 0, None, 0
+    while processed < max_plants:
         root = dump()
-        rows = [r for r in list_plant_rows(root) if r[0] not in visited]
+        allrows = list_plant_rows(root)
+        sig = tuple(n for n, _ in allrows)
+        rows = [r for r in allrows if r[0] not in visited]
         if not rows:
-            stale += 1
-            if stale >= MAX_LIST_STALE:
-                print(f"\nDone. Bottom of list. {uid} plants processed.")
-                break
+            # nothing new on screen: keep scrolling through already-done regions.
+            # Real bottom only when the list also stops moving (sig unchanged).
+            if sig == prev_sig:
+                stale += 1
+                if stale >= MAX_LIST_STALE:
+                    print(f"\nDone. Bottom of list. {processed} plants this run.")
+                    break
+            else:
+                stale = 0
+            prev_sig = sig
             swipe(w, h, 0.80, 0.45)
             continue
         stale = 0
+        prev_sig = sig
         name, ty = rows[0]
         visited.add(name)
         uid += 1
+        processed += 1
         uid_s = f"P{uid:04d}"
         adb("shell", "input", "tap", str((LEFT_X + 700) // 2), str(ty)); time.sleep(SETTLE)
         if LIST_ACT not in top_activity():
