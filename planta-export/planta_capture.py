@@ -34,10 +34,13 @@ OUT_DIR     = "planta_shots"
 MAX_SHOTS   = 600     # safety cap
 SETTLE      = 0.6     # seconds to wait after each swipe for the list to settle
 SWIPE_MS    = 600     # swipe duration; longer = controlled drag, not a fling
-STABLE_HITS = 2       # stop after this many near-identical frames in a row
+STABLE_HITS = 4       # stop after this many near-identical frames in a row
+                      # (>=4: rides out lazy-load pauses + periodic rejected swipes)
 DIFF_THRESH = 2.0     # mean per-pixel difference below this = "no movement"
-Y_START_F   = 0.75    # swipe starts here (fraction of screen height)
-Y_END_F     = 0.33    # ...and ends here. The gap = scroll distance (overlap on purpose)
+Y_START_F   = 0.85    # swipe starts here (fraction of screen height)
+Y_END_F     = 0.15    # ...and ends here. Gap ~0.70H = ~7 rows/swipe, ~1 row overlap.
+                      # List area (crop 0.10-0.90 = 0.80H) shows ~8 rows, so this
+                      # advances ~8 plants/shot while keeping one row to dedup on.
 
 
 def adb(*args, binary=False):

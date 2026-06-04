@@ -46,10 +46,14 @@ git add . && git commit -m "what changed" && git push
 ```
 
 ## Next steps / open items  (do these in Claude Code / VSCode — needs USB phone + native git)
-- [ ] **Test capture run:** phone plugged in, USB debugging on, Planta open at top
-      of the Plants tab → `python3 planta_capture.py`. Confirms capture works and
-      produces sample shots.
+- [x] **Test capture run** (2026-06-04): full run captured **133 shots, A→Z, all
+      861 plants** into `planta_shots/`. Tuning that worked: swipe `Y_START_F=0.85`
+      → `Y_END_F=0.15` (~8 plants/shot, 1-row overlap), `STABLE_HITS=4` to ride out
+      periodic single-swipe stalls + the lazy-load pause. Keep screen awake during a
+      run: `adb shell svc power stayon true` (revert: `... stayon false`).
 - [ ] **Write `planta_process.py`** — the OCR → stitch → dedup step. NOT YET WRITTEN.
+      Calibrate to layout: thumbnail (left) · **Latin name (Common name)** bold · then
+      **category** (Cacti / Bromeliads / Ferns / ...) below. Care/% badges to ignore.
       Needs **2–3 sample screenshots** from the test run to calibrate to Planta's
       list layout (row height, text regions, column positions).
 - [ ] Capture tuning: confirm consecutive shots overlap by ~a row; nudge `Y_END_F`
