@@ -8,10 +8,23 @@ TARGET=861                     # ~plants in the collection (manifest = plants + 
 adb shell svc power stayon true >/dev/null 2>&1
 
 noprog=0
-for i in $(seq 1 80); do
-  # wake the screen + bring Planta to front before each pass (survives the phone
-  # locking or another app stealing focus between passes)
+for i in $(seq 1 250); do
+  # Wait for the phone to be present (USB drops are frequent on this rig). Poll up
+  # to ~10 min; if it never returns, count it as no-progress and move on.
+  present=0
+  for w in $(seq 1 120); do
+    if adb devices 2>/dev/null | grep -qw device; then present=1; break; fi
+    sleep 5
+  done
+  if [ "$present" = 0 ]; then
+    echo "=== pass $i: no device after wait ===" >> photo_run.log
+    noprog=$((noprog + 1))
+    [ "$noprog" -ge 8 ] && { echo "STOP: device gone too long" >> photo_run.log; break; }
+    continue
+  fi
+  # wake + bring Planta to front (survives locking / focus theft between passes)
   adb shell input keyevent KEYCODE_WAKEUP >/dev/null 2>&1
+  adb shell svc power stayon true >/dev/null 2>&1
   adb shell am start -n com.stromming.planta/.main.views.MainActivity >/dev/null 2>&1
   sleep 2
   before=$(wc -l < planta_photos_manifest.csv 2>/dev/null | tr -d ' ')
@@ -27,8 +40,8 @@ for i in $(seq 1 80); do
   if [ "$after" = "$before" ]; then
     noprog=$((noprog + 1))
     echo "no progress (streak $noprog)" >> photo_run.log
-    [ "$noprog" -ge 4 ] && { echo "STOP: 4 passes with no progress" >> photo_run.log; break; }
-    sleep 20            # transient (locked/popup); wait, then retry
+    [ "$noprog" -ge 8 ] && { echo "STOP: 8 passes with no progress" >> photo_run.log; break; }
+    sleep 15
   else
     noprog=0
     sleep 5

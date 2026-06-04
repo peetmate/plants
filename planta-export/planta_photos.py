@@ -54,6 +54,24 @@ MAX_PHOTO_SCROLLS = 30        # photos-list scrolls to load all entries
 MAX_LIST_STALE = 3            # list scrolls with no new plant = bottom
 
 
+def _load_categories():
+    """Category/family strings (the lighter 2nd line of each card). Used to drop a
+    dangling category line that lands at screen-top on resume and would otherwise be
+    misread as a plant name. Sourced from planta_plants.csv + a built-in fallback."""
+    cats = {"Cacti", "Bromeliads", "Orchids", "Ferns", "Echeverias & Allies"}
+    p = os.path.join(HERE, "planta_plants.csv")
+    if os.path.exists(p):
+        with open(p, newline="", encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                c = (row.get("Category") or "").strip()
+                if c:
+                    cats.add(c)
+    return cats
+
+
+CATEGORIES = _load_categories()
+
+
 def adb(*a, binary=False):
     r = subprocess.run(["adb", *a], capture_output=True)
     return r.stdout if binary else r.stdout.decode("utf-8", "replace")
@@ -184,9 +202,12 @@ def list_plant_rows(root):
         cards.append(cur)
     out = []
     for c in cards:
-        if len(c) < 2:            # full plant card = name line + category line;
-            continue              # single-line = a screen-edge partial (or a stray
-                                  # category) -> skip; the plant shows fully elsewhere
+        # drop dangling category line(s) that lead a card (top-of-screen partial on
+        # resume), so the real name below them is used - not the category
+        while c and c[0][2] in CATEGORIES:
+            c = c[1:]
+        if len(c) < 2:            # need name line + its category line = a full card;
+            continue              # name-only edge partials show fully elsewhere
         top, bot, name = c[0]
         if name.endswith("aceae") and " " not in name:
             continue
@@ -338,7 +359,10 @@ def main():
         adb("shell", "input", "tap", str((LEFT_X + 700) // 2), str(ty)); time.sleep(SETTLE)
         if LIST_ACT not in top_activity():
             print(f"{uid_s} {name!r}: detail didn't open, skipping")
-            back()
+            # only back if we actually drilled into a sub-screen; pressing BACK on
+            # the list root (MainActivity) would EXIT Planta to the launcher
+            if "MainActivity" not in top_activity():
+                back()
             continue
         files = capture_plant_photos(w, h, uid_s, name)
         print(f"{uid_s} {name!r}: {len(files)} photo(s)")
