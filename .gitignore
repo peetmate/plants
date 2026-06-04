@@ -1,0 +1,22 @@
+# Screenshots / captures (large, regenerated each run)
+planta_shots/
+*.png
+*.jpg
+*.jpeg
+
+# Spreadsheets (large/binary; live in Google Drive)
+*.xlsx
+*.xls
+*.xlsm
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# OS / sync junk
+.DS_Store
+.sync.ffs_db
+Thumbs.db
