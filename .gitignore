@@ -30,3 +30,10 @@ Thumbs.db
 
 # Run logs
 *.log
+
+# Claude working docs (local only, public repo)
+CLAUDE.md
+PLAYBOOK.md
+
+# Archived old tooling (local only)
+archive/
