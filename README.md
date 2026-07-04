@@ -1,20 +1,30 @@
 # plants
 
-Software and tooling for Pete Steward's orchid & succulent collection (Nairobi, Kenya).
+A public, photo-illustrated catalogue of Pete Steward's orchid collection grown
+in Nairobi, Kenya.
 
-This repo will grow over time. The collection's source-of-truth data (Excel
-workbooks, photos, handovers) lives in Google Drive — **not** here, to avoid
-Drive syncing git's internals. This repo holds code and tooling only.
+## The website
 
-## Components
+The live site is served via **GitHub Pages** from the [`gh-pages`](../../tree/gh-pages)
+branch: **https://peetmate.github.io/plants/**
 
-- **`planta-export/`** — pull the full plant inventory out of the
-  [Planta](https://getplanta.com) app (which has no export or public API) via
-  screenshot automation → OCR → dedup. See `planta-export/README.md`.
+Each plant card shows the accepted name, photos, and cultural notes (light,
+temperature, humidity, air movement, feeding, watering and media). It's a
+read-only showcase built from a personal collection database; personal details
+(acquisition sources, prices, private notes) have been removed.
+
+## Repo layout
+
+- **`gh-pages` branch** — the published website: a self-contained `index.html`
+  plus `Photos/` keyed by plant UID.
+- **`main` branch** — project scaffolding. The collection's source-of-truth data
+  (Excel workbooks, full-resolution photos) lives in Google Drive, not here.
+
+Earlier screenshot/OCR tooling (`planta-export/`, used to pull the inventory out
+of the [Planta](https://getplanta.com) app) has been archived and lives in the
+git history.
 
 ## Conventions
 
-- Large/binary artefacts (screenshots, `*.xlsx`) are git-ignored — they're
-  regenerated or live in Drive.
-- Keep this repo local (it is, under `~/Documents/rprojects/`) so git never
-  runs inside a Drive-synced folder.
+- Large/binary artefacts are git-ignored — they're regenerated or live in Drive.
+- The repo is kept outside any Drive-synced folder so git never runs inside one.
