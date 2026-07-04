@@ -37,3 +37,10 @@ PLAYBOOK.md
 
 # Archived old tooling (local only)
 archive/
+
+# collection-app data (lives in Drive DATA_DIR, never committed)
+*.sqlite
+edits.json
+collection.json
+collection-app/.venv/
+collection-app/__pycache__/
