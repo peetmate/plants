@@ -59,6 +59,7 @@ brew install --cask libreoffice
 | POST   | `/api/plant/<uid>/cover`    | `{photo}` → upsert cover pick             |
 | GET    | `/api/pending`              | uids with unapplied note/cover edits     |
 | POST   | `/api/apply`                | merge sidecar → workbook + covers.json (safe)|
+| POST   | `/api/refresh`              | rebuild viewers (`build_collection.py`)  |
 | GET    | `/Photos/<path>`            | photo files from `DATA_DIR/Photos`       |
 
 ## Apply workflow (implemented — `apply.py`)
@@ -78,5 +79,16 @@ protocol — nothing touches the Drive workbook until every check passes:
 6. back up the workbook to `Backups/`, then atomically replace it;
 7. update `covers.json`, log to `apply_log`, clear the applied sidecar rows.
 
-After applying, run `build_collection.py` to refresh the viewers (that
-one-command refresh is v1.2 / issue #6).
+## Refresh the viewers (`refresh.py`)
+
+After applying (or any workbook/photo change), rebuild the viewers so
+`collection.json` + `collection.html` + `collection-portable.html` reflect the
+current workbook. Either:
+
+- click **Refresh viewers** (offered in the apply bar after an apply), which
+  `POST`s `/api/refresh`, or
+- run it from the terminal: `python refresh.py`.
+
+Both run the project's `build_collection.py` in `DATA_DIR`. The **public**
+GitHub Pages site is a separate step — rebuild the redacted copy with
+`build_public.py` and push `gh-pages` (see `PLAYBOOK.md`); refresh only reminds.

@@ -15,6 +15,7 @@ from flask import Flask, Response, abort, jsonify, request, send_from_directory
 import apply as apply_mod
 import config
 import db
+import refresh as refresh_mod
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 db.init_db()
@@ -88,6 +89,13 @@ def api_apply():
     # via the safe protocol (backup, local copy, LibreOffice recalc, validator,
     # optimistic-lock copy-back). See apply.py.
     payload, status = apply_mod.apply_edits()
+    return jsonify(payload), status
+
+
+@app.route("/api/refresh", methods=["POST"])
+def api_refresh():
+    # Rebuild the viewers (collection.json + both HTML) from the workbook.
+    payload, status = refresh_mod.run_build_collection()
     return jsonify(payload), status
 
 

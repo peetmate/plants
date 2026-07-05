@@ -29,14 +29,36 @@ window.addEventListener("load", function () {
     var n = PENDING_NOTES.size, c = PENDING_COVERS.size;
     if (!n && !c && !msg) { bar.style.display = "none"; return; }
     bar.style.display = "block";
-    bar.innerHTML =
-      "<div><b>Unapplied edits:</b> " + n + " note" + (n === 1 ? "" : "s") +
-      ", " + c + " cover" + (c === 1 ? "" : "s") + "</div>" +
-      '<button id="apply-btn"' + (busy ? " disabled" : "") + ">" +
-      (busy ? "Applying…" : "Apply to workbook") + "</button>" +
-      (msg ? '<div class="ab-msg">' + msg + "</div>" : "");
-    var b = document.getElementById("apply-btn");
-    if (b) b.onclick = applyEdits;
+    var head = (n || c)
+      ? "<div><b>Unapplied edits:</b> " + n + " note" + (n === 1 ? "" : "s") +
+        ", " + c + " cover" + (c === 1 ? "" : "s") + "</div>"
+      : "";
+    var btn;
+    if (n || c) {
+      btn = '<button id="apply-btn"' + (busy ? " disabled" : "") + ">" +
+        (busy ? "Applying…" : "Apply to workbook") + "</button>";
+    } else {
+      btn = '<button id="refresh-btn"' + (busy ? " disabled" : "") + ">" +
+        (busy ? "Rebuilding…" : "Refresh viewers") + "</button>";
+    }
+    bar.innerHTML = head + btn + (msg ? '<div class="ab-msg">' + msg + "</div>" : "");
+    var ab = document.getElementById("apply-btn"); if (ab) ab.onclick = applyEdits;
+    var rb = document.getElementById("refresh-btn"); if (rb) rb.onclick = refreshViewers;
+  };
+
+  window.refreshViewers = function () {
+    refreshApplyBar("Rebuilding viewers…", true);
+    fetch("/api/refresh", { method: "POST" })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.ok) {
+          refreshApplyBar("Viewers rebuilt. " + (d.public_reminder || ""), false);
+          setTimeout(function () { refreshApplyBar("", false); }, 9000);
+        } else {
+          refreshApplyBar("Refresh failed: " + (d.error || "see server log"), false);
+        }
+      })
+      .catch(function () { refreshApplyBar("Refresh failed: network error", false); });
   };
 
   window.applyEdits = function () {
