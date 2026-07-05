@@ -7,8 +7,8 @@ collection. It serves the existing desktop viewer and lets you:
 - pick the **cover photo** per plant,
 
 persisting both to a SQLite sidecar. The Excel workbook stays the source of
-truth; this app never writes it directly (that is the separate, deliberate
-*apply* step — v1.1, not yet built).
+truth; it is written only by the separate, deliberate **apply** step
+(`/api/apply`), which follows the project's safe protocol.
 
 ## Run
 
@@ -21,6 +21,12 @@ python app.py          # -> http://127.0.0.1:8000
 
 Data (workbook, `collection.json`, `Photos/`, sidecar DB) is **not** in this
 repo — it lives in Google Drive and is located at runtime via `DATA_DIR`.
+
+The **apply** step needs **LibreOffice** (`soffice`) for headless recalc:
+
+```bash
+brew install --cask libreoffice
+```
 
 ## Config (env vars)
 
@@ -52,13 +58,25 @@ repo — it lives in Google Drive and is located at runtime via `DATA_DIR`.
 | POST   | `/api/plant/<uid>/note`     | `{note}` → upsert note                    |
 | POST   | `/api/plant/<uid>/cover`    | `{photo}` → upsert cover pick             |
 | GET    | `/api/pending`              | uids with unapplied note/cover edits     |
-| POST   | `/api/apply`                | **501 in v1** — workbook write-back (v1.1)|
+| POST   | `/api/apply`                | merge sidecar → workbook + covers.json (safe)|
 | GET    | `/Photos/<path>`            | photo files from `DATA_DIR/Photos`       |
 
-## Apply workflow (v1.1 — planned, issue #5)
+## Apply workflow (implemented — `apply.py`)
 
-Merges sidecar notes into the workbook Notes column and cover picks into
-`Photos/covers.json` using the project's safe protocol: back up the workbook,
-work on a local copy, write notes with openpyxl (culture formula columns
-untouched), LibreOffice-headless recalc, validate, optimistic-lock copy-back,
-log to `apply_log`.
+`POST /api/apply` (or the amber **Apply to workbook** button that appears when
+edits are pending) merges sidecar notes into the workbook Notes column (col L,
+keyed by UID) and cover picks into `Photos/covers.json`, following the safe
+protocol — nothing touches the Drive workbook until every check passes:
+
+1. work on a **local copy**, never the Drive file directly;
+2. openpyxl writes only the Notes column (culture/formula columns untouched);
+3. **LibreOffice headless recalc** rebuilds formula caches (openpyxl save drops
+   them and the downstream viewers read `data_only`);
+4. verify readback — notes written, col-F keys resolve, sheets/charts intact,
+   and `validate_workbook.py` shows **no new** issues vs the current workbook;
+5. **optimistic-lock** copy-back — abort if the Drive workbook changed meanwhile;
+6. back up the workbook to `Backups/`, then atomically replace it;
+7. update `covers.json`, log to `apply_log`, clear the applied sidecar rows.
+
+After applying, run `build_collection.py` to refresh the viewers (that
+one-command refresh is v1.2 / issue #6).

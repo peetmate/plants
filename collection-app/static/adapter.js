@@ -11,11 +11,51 @@ window.addEventListener("load", function () {
     ".note-edit label{font-weight:600;font-size:.9em}" +
     ".note-edit .pend{color:#e08a00;font-size:.82em;margin-left:8px}" +
     ".note-edit textarea{width:100%;box-sizing:border-box;min-height:64px;margin-top:4px;font:inherit;padding:6px;border:1px solid #ccc;border-radius:6px;resize:vertical}" +
-    ".note-edit .note-save{margin-top:5px;padding:4px 14px;border-radius:6px;border:1px solid #bbb;background:#f4f4f4;cursor:pointer;font:inherit}";
+    ".note-edit .note-save{margin-top:5px;padding:4px 14px;border-radius:6px;border:1px solid #bbb;background:#f4f4f4;cursor:pointer;font:inherit}" +
+    "#apply-bar{position:fixed;right:16px;bottom:16px;z-index:9999;background:#222;color:#fff;border-radius:10px;padding:10px 14px;box-shadow:0 4px 16px #0005;font:14px/1.3 system-ui,sans-serif;display:none;max-width:320px}" +
+    "#apply-bar button{margin-top:8px;padding:6px 14px;border-radius:7px;border:0;background:#e08a00;color:#fff;font:inherit;font-weight:600;cursor:pointer}" +
+    "#apply-bar button:disabled{opacity:.6;cursor:default}" +
+    "#apply-bar .ab-msg{font-size:.85em;opacity:.85;margin-top:6px}";
   document.head.appendChild(st);
+
+  var bar = document.createElement("div");
+  bar.id = "apply-bar";
+  document.body.appendChild(bar);
 
   window.PENDING_NOTES = new Set();
   window.PENDING_COVERS = new Set();
+
+  window.refreshApplyBar = function (msg, busy) {
+    var n = PENDING_NOTES.size, c = PENDING_COVERS.size;
+    if (!n && !c && !msg) { bar.style.display = "none"; return; }
+    bar.style.display = "block";
+    bar.innerHTML =
+      "<div><b>Unapplied edits:</b> " + n + " note" + (n === 1 ? "" : "s") +
+      ", " + c + " cover" + (c === 1 ? "" : "s") + "</div>" +
+      '<button id="apply-btn"' + (busy ? " disabled" : "") + ">" +
+      (busy ? "Applying…" : "Apply to workbook") + "</button>" +
+      (msg ? '<div class="ab-msg">' + msg + "</div>" : "");
+    var b = document.getElementById("apply-btn");
+    if (b) b.onclick = applyEdits;
+  };
+
+  window.applyEdits = function () {
+    refreshApplyBar("", true);
+    fetch("/api/apply", { method: "POST" })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        if (res.ok && res.d.ok) {
+          PENDING_NOTES.clear(); PENDING_COVERS.clear();
+          refreshApplyBar("Applied: " + res.d.applied_notes + " notes, " +
+            res.d.applied_covers + " covers. Backup saved.", false);
+          render();
+          setTimeout(function () { refreshApplyBar("", false); }, 6000);
+        } else {
+          refreshApplyBar("Failed: " + (res.d.error || "unknown error"), false);
+        }
+      })
+      .catch(function () { refreshApplyBar("Failed: network error", false); });
+  };
 
   // cover pick -> persist server-side (replaces the localStorage-only version)
   window.setCover = function (e, uid, fname) {
@@ -27,7 +67,7 @@ window.addEventListener("load", function () {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ photo: fname }),
     }).then(function (r) {
-      if (r.ok) { PENDING_COVERS.add(uid); render(); }
+      if (r.ok) { PENDING_COVERS.add(uid); render(); refreshApplyBar(); }
     });
     var p = PLANTS.find(function (x) { return x.uid === uid; });
     if (p) photoPos[uid] = coverIndex(p);
@@ -50,6 +90,7 @@ window.addEventListener("load", function () {
         if (p) p.notes = val;
         PENDING_NOTES.add(uid);
         btn.textContent = "Saved ✓";
+        refreshApplyBar();
         setTimeout(function () { render(); }, 500);
       })
       .catch(function () { btn.disabled = false; btn.textContent = "Save (failed)"; });
@@ -99,5 +140,6 @@ window.addEventListener("load", function () {
       window.BAKED_COVERS = d.baked_covers || {};
       photoPos = {};
       render();
+      refreshApplyBar();
     });
 });

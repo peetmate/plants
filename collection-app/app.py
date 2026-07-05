@@ -12,6 +12,7 @@ import json
 
 from flask import Flask, Response, abort, jsonify, request, send_from_directory
 
+import apply as apply_mod
 import config
 import db
 
@@ -83,10 +84,11 @@ def api_pending():
 
 @app.route("/api/apply", methods=["POST"])
 def api_apply():
-    # Deliberately not implemented in v1 — writing the workbook is the v1.1 step
-    # (see issue #5: backup, local copy, openpyxl, LibreOffice recalc, validator,
-    # optimistic-lock copy-back, covers.json).
-    return jsonify({"error": "apply not implemented in v1 (see issue #5 / v1.1)"}), 501
+    # Merge sidecar notes -> workbook Notes column and cover picks -> covers.json,
+    # via the safe protocol (backup, local copy, LibreOffice recalc, validator,
+    # optimistic-lock copy-back). See apply.py.
+    payload, status = apply_mod.apply_edits()
+    return jsonify(payload), status
 
 
 @app.route("/Photos/<path:sub>")
