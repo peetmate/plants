@@ -3,6 +3,8 @@
 A public, photo-illustrated catalogue of Pete Steward's orchid collection grown
 in Nairobi, Kenya.
 
+### 🌸 Live site → **https://peetmate.github.io/plants/**
+
 ## The website
 
 The live site is served via **GitHub Pages** from the [`gh-pages`](../../tree/gh-pages)
@@ -17,8 +19,9 @@ read-only showcase built from a personal collection database; personal details
 
 - **`gh-pages` branch** — the published website: a self-contained `index.html`
   plus `Photos/` keyed by plant UID.
-- **`main` branch** — project scaffolding. The collection's source-of-truth data
-  (Excel workbooks, full-resolution photos) lives in Google Drive, not here.
+- **`main` branch** — code/tooling, incl. `collection-app/` (a localhost app for
+  editing the private collection and publishing this site). The source-of-truth
+  data (Excel workbooks, full-resolution photos) lives in Google Drive, not here.
 
 Earlier screenshot/OCR tooling (`planta-export/`, used to pull the inventory out
 of the [Planta](https://getplanta.com) app) has been archived and lives in the
