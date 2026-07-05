@@ -15,6 +15,7 @@ from flask import Flask, Response, abort, jsonify, request, send_from_directory
 import apply as apply_mod
 import config
 import db
+import publish as publish_mod
 import refresh as refresh_mod
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
@@ -96,6 +97,14 @@ def api_apply():
 def api_refresh():
     # Rebuild the viewers (collection.json + both HTML) from the workbook.
     payload, status = refresh_mod.run_build_collection()
+    return jsonify(payload), status
+
+
+@app.route("/api/publish", methods=["POST"])
+def api_publish():
+    # Rebuild the redacted public site and push gh-pages (GitHub Pages).
+    dry = request.args.get("dry_run") == "1"
+    payload, status = publish_mod.publish(dry_run=dry)
     return jsonify(payload), status
 
 

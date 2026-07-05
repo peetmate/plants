@@ -15,12 +15,51 @@ window.addEventListener("load", function () {
     "#apply-bar{position:fixed;right:16px;bottom:16px;z-index:9999;background:#222;color:#fff;border-radius:10px;padding:10px 14px;box-shadow:0 4px 16px #0005;font:14px/1.3 system-ui,sans-serif;display:none;max-width:320px}" +
     "#apply-bar button{margin-top:8px;padding:6px 14px;border-radius:7px;border:0;background:#e08a00;color:#fff;font:inherit;font-weight:600;cursor:pointer}" +
     "#apply-bar button:disabled{opacity:.6;cursor:default}" +
-    "#apply-bar .ab-msg{font-size:.85em;opacity:.85;margin-top:6px}";
+    "#apply-bar .ab-msg{font-size:.85em;opacity:.85;margin-top:6px}" +
+    "#publish-bar{position:fixed;left:16px;bottom:16px;z-index:9998;font:13px system-ui,sans-serif}" +
+    "#publish-bar button{padding:7px 12px;border-radius:8px;border:1px solid #2a6;background:#eafbf0;color:#1a6b3a;font:inherit;font-weight:600;cursor:pointer;box-shadow:0 2px 8px #0002}" +
+    "#publish-bar button:disabled{opacity:.6;cursor:default}" +
+    "#publish-bar .pb-msg{margin-top:6px;max-width:300px;font-size:.85em;background:#222;color:#fff;padding:8px 10px;border-radius:8px;display:none}";
   document.head.appendChild(st);
 
   var bar = document.createElement("div");
   bar.id = "apply-bar";
   document.body.appendChild(bar);
+
+  var pbar = document.createElement("div");
+  pbar.id = "publish-bar";
+  pbar.innerHTML = '<button id="publish-btn">Publish public site</button><div class="pb-msg" id="pb-msg"></div>';
+  document.body.appendChild(pbar);
+
+  function pbMsg(html) {
+    var m = document.getElementById("pb-msg");
+    if (!html) { m.style.display = "none"; return; }
+    m.style.display = "block"; m.innerHTML = html;
+  }
+
+  window.publishSite = function () {
+    if (!confirm("Rebuild the redacted public site and push it live to GitHub Pages?\n\nThis publishes the current collection (with your applied covers/notes) to peetmate.github.io/plants.")) return;
+    var btn = document.getElementById("publish-btn");
+    btn.disabled = true; btn.textContent = "Publishing…";
+    pbMsg("Refreshing viewers, building redacted site, pushing gh-pages… (up to a minute)");
+    fetch("/api/publish", { method: "POST" })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        btn.disabled = false; btn.textContent = "Publish public site";
+        if (d.ok && d.pushed) {
+          pbMsg("✓ Published (" + d.commit + "). Live in ~1 min at <a href='" + d.url + "' target='_blank' style='color:#8cf'>" + d.url + "</a>");
+        } else if (d.ok) {
+          pbMsg("✓ " + (d.note || "Nothing to publish."));
+        } else {
+          pbMsg("✗ Failed at " + (d.step || "?") + ": " + (d.error || "see server log"));
+        }
+      })
+      .catch(function () {
+        btn.disabled = false; btn.textContent = "Publish public site";
+        pbMsg("✗ Failed: network error");
+      });
+  };
+  document.getElementById("publish-btn").onclick = publishSite;
 
   window.PENDING_NOTES = new Set();
   window.PENDING_COVERS = new Set();

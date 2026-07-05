@@ -19,5 +19,11 @@ PHOTOS_DIR = DATA_DIR / "Photos"
 COVERS_JSON = PHOTOS_DIR / "covers.json"
 DB_PATH = Path(os.environ.get("EDITS_DB", DATA_DIR / "edits.sqlite"))
 
+# Git repo that holds the gh-pages branch (this app lives inside it).
+REPO_DIR = Path(os.environ.get("REPO_DIR", Path(__file__).resolve().parent.parent))
+# build_public.py (redacted public-site builder) lives beside the Claude notes.
+BUILD_PUBLIC = Path(os.environ.get(
+    "BUILD_PUBLIC", DATA_DIR.parent / "Claude" / "build_public.py"))
+
 HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8000"))
