@@ -9,6 +9,7 @@ note per plant and pick a cover photo, and persists both to the SQLite sidecar.
 No cloud, no auth. Workbook is never written here (that is the v1.1 apply step).
 """
 import json
+import os
 
 from flask import Flask, Response, abort, jsonify, request, send_from_directory
 
@@ -19,7 +20,10 @@ import publish as publish_mod
 import refresh as refresh_mod
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0  # don't let the browser cache adapter.js
 db.init_db()
+
+_ADAPTER = os.path.join(os.path.dirname(__file__), "static", "adapter.js")
 
 
 def _load_plants():
@@ -36,7 +40,8 @@ def _load_baked_covers():
 @app.route("/")
 def index():
     html = config.COLLECTION_HTML.read_text(encoding="utf-8")
-    html = html.replace("</body>", '<script src="/static/adapter.js"></script>\n</body>', 1)
+    ver = int(os.path.getmtime(_ADAPTER))  # cache-bust when adapter.js changes
+    html = html.replace("</body>", f'<script src="/static/adapter.js?v={ver}"></script>\n</body>', 1)
     return Response(html, mimetype="text/html")
 
 
