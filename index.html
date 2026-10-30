@@ -681,7 +681,7 @@ render();
 </script>
 
 <div id="localbtn-wrap" style="position:fixed;top:8px;right:10px;z-index:9999;font:12px system-ui">
-<button id="localbtn" title="Copy link to full local dashboard" style="padding:4px 9px;border-radius:6px;border:1px solid #999;background:#fff;cursor:pointer">Local ↗</button>
+<button id="localbtn" title="Copies the local dashboard address — then ⌘L, ⌘V, Enter" style="padding:4px 9px;border-radius:6px;border:1px solid #999;background:#fff;cursor:pointer">Local ↗</button>
 <span id="localmsg" style="display:none;margin-left:6px;background:#222;color:#fff;padding:3px 7px;border-radius:5px"></span>
 </div>
 <script>
@@ -691,8 +691,7 @@ render();
  function get(){try{return localStorage.getItem(K)}catch(e){return null}}
  function set(v){try{localStorage.setItem(K,v)}catch(e){}}
  b.onclick=function(ev){
-  var u=get();
-  if(!u||ev.altKey){u=prompt("Paste the file:// address of your local collection.html (saved in this browser only):",u||"");if(!u)return;set(u.trim());u=u.trim()}
+  var u="file:///Users/pstewarda/Library/CloudStorage/GoogleDrive-peetmate@gmail.com/My%20Drive/Plants/Collection/collection.html";
   if(navigator.clipboard){navigator.clipboard.writeText(u).then(function(){say("Copied — ⌘L, ⌘V, Enter")},function(){prompt("Copy this:",u)})}else{prompt("Copy this:",u)}
  };
 })();
